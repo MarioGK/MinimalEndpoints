@@ -1,0 +1,17 @@
+<Project>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <LangVersion>preview</LangVersion>
+
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+
+        <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <AnalysisLevel>latest</AnalysisLevel>
+
+        <Authors>TerraScale</Authors>
+
+        <NoWarn>$(NoWarn);NU1507;NU1900;NU1801</NoWarn>
+    </PropertyGroup>
+</Project>
