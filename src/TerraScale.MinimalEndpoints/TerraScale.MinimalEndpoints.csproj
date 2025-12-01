@@ -21,7 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\MinimalEndpoints.Analyzers\TerraScale.MinimalEndpoints.Analyzers.csproj"
+        <ProjectReference Include="..\TerraScale.MinimalEndpoints.Analyzers\TerraScale.MinimalEndpoints.Analyzers.csproj"
                           OutputItemType="Analyzer"
                           ReferenceOutputAssembly="false" />
     </ItemGroup>

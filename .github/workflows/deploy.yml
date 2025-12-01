@@ -79,15 +79,15 @@ jobs:
             echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           else
             # GitVersion MSBuild target creates obj/gitversion.json in the project folder
-            echo "Reading gitversion file: MinimalEndpoints/obj/gitversion.json"
-            cat MinimalEndpoints/obj/gitversion.json
-            VERSION=$(jq -r '.NuGetVersionV2' MinimalEndpoints/obj/gitversion.json)
+            echo "Reading gitversion file: TerraScale.MinimalEndpoints/obj/gitversion.json"
+            cat TerraScale.MinimalEndpoints/obj/gitversion.json
+            VERSION=$(jq -r '.NuGetVersionV2' TerraScale.MinimalEndpoints/obj/gitversion.json)
             echo "VERSION=$VERSION" >> $GITHUB_ENV
           fi
         working-directory: ./src
 
       - name: Pack NuGet package
-        run: dotnet pack MinimalEndpoints/TerraScale.MinimalEndpoints.csproj --configuration Release --output ./nupkg --no-build -p:PackageVersion=${{ env.VERSION }}
+        run: dotnet pack TerraScale.MinimalEndpoints/TerraScale.MinimalEndpoints.csproj --configuration Release --output ./nupkg --no-build -p:PackageVersion=${{ env.VERSION }}
         working-directory: ./src
 
       - name: Push to NuGet.org
