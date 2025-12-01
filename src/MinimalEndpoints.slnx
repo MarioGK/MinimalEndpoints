@@ -11,6 +11,7 @@
     <File Path="..\.github\copilot-instructions.md" />
     <File Path="..\.github\workflows\copilot-setup-steps.yml" />
   </Folder>
+  <Project Path="MinimalEndpoints.Analyzers\MinimalEndpoints.Analyzers.csproj" />
   <Project Path="MinimalEndpoints.Example\MinimalEndpoints.Example.csproj" />
   <Project Path="MinimalEndpoints.Tests\MinimalEndpoints.Tests.csproj" />
   <Project Path="MinimalEndpoints\MinimalEndpoints.csproj" />

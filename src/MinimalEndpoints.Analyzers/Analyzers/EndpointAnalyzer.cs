@@ -98,7 +98,7 @@ internal static class EndpointAnalyzer
             return null;
 
         // Check if method is async - all endpoints must be async
-        if (!methodSymbol.ReturnType.ToDisplayString().Contains("Task"))
+        if (!methodSymbol.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Contains("Task"))
         {
             var diagnostic = Diagnostic.Create(
                 new DiagnosticDescriptor(
@@ -123,7 +123,7 @@ internal static class EndpointAnalyzer
              var typeArg = namedReturnType.TypeArguments.FirstOrDefault();
              if (typeArg != null)
              {
-                 returnTypeInner = typeArg.ToDisplayString();
+                 returnTypeInner = typeArg.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                  // Strip nullable annotation from reference types for typeof() compatibility
                  if (typeArg.IsReferenceType && returnTypeInner.EndsWith("?"))
                  {
@@ -142,7 +142,7 @@ internal static class EndpointAnalyzer
             var endpointParam = new EndpointParameter
             {
                 Name = param.Name,
-                Type = param.Type?.ToDisplayString() ?? "object",
+                Type = param.Type?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? "object",
                 IsFromServices = param.GetAttributes().Any(a => a.AttributeClass?.Name.Contains("FromServices") == true),
                 IsFromBody = param.GetAttributes().Any(a => a.AttributeClass?.Name.Contains("FromBody") == true),
                 IsFromRoute = param.GetAttributes().Any(a => a.AttributeClass?.Name.Contains("FromRoute") == true),
@@ -217,15 +217,27 @@ internal static class EndpointAnalyzer
                       m.Parameters.Length == 1 &&
                       m.Parameters[0].Type.Name == "RouteHandlerBuilder");
 
+        // Extract endpoint filters
+        var endpointFilters = new List<string>();
+        endpointFilters.AddRange(GetEndpointFilters(methodSymbol.ContainingType));
+        endpointFilters.AddRange(GetEndpointFilters(methodSymbol));
+
+        // Auto-detect multipart/form-data
+        var hasFormFile = parameters.Any(p => p.Type.Contains("IFormFile"));
+        if (hasFormFile && !consumes.Any())
+        {
+            consumes.Add("multipart/form-data");
+        }
+
         return new EndpointMethod
         {
-            ClassNamespace = methodSymbol.ContainingType.ContainingNamespace?.ToDisplayString() ?? string.Empty,
+            ClassNamespace = methodSymbol.ContainingType.ContainingNamespace?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? string.Empty,
             ClassName = methodSymbol.ContainingType.Name,
             MethodName = methodSymbol.Name,
             HttpMethod = httpMethod,
             Route = fullRoute,
             Parameters = parameters,
-            ReturnType = methodSymbol.ReturnType.ToDisplayString(),
+            ReturnType = methodSymbol.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             ReturnTypeInner = returnTypeInner,
             HasAuthorize = hasAuthorize,
             HasAllowAnonymous = hasAllowAnonymous,
@@ -241,8 +253,25 @@ internal static class EndpointAnalyzer
             Consumes = consumes,
             ResponseDescriptions = responseDescriptions,
             ParameterDescriptions = parameterDescriptions,
-            HasConfigureMethod = hasConfigureMethod
+            HasConfigureMethod = hasConfigureMethod,
+            EndpointFilters = endpointFilters
         };
+    }
+
+    private static List<string> GetEndpointFilters(ISymbol symbol)
+    {
+        var filters = new List<string>();
+        var attributes = symbol.GetAttributes()
+            .Where(a => a.AttributeClass?.Name == "EndpointFilterAttribute");
+
+        foreach (var attr in attributes)
+        {
+            if (attr.ConstructorArguments.Length > 0 && attr.ConstructorArguments[0].Value is INamedTypeSymbol typeSymbol)
+            {
+                filters.Add(typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            }
+        }
+        return filters;
     }
 
     public static string GetBaseRoute(INamedTypeSymbol classSymbol)
@@ -336,6 +365,10 @@ internal static class EndpointAnalyzer
 
         if (string.IsNullOrEmpty(methodRoute))
             return baseRoute;
+
+        // If method route is absolute (starts with /), ignore base route
+        if (methodRoute.StartsWith("/"))
+            return methodRoute;
 
         baseRoute = baseRoute.Trim('/');
         methodRoute = methodRoute.Trim('/');
