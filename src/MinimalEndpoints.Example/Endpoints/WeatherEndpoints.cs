@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using MinimalEndpoints;
-using MinimalEndpoints.Attributes;
+using TerraScale.MinimalEndpoints;
+using TerraScale.MinimalEndpoints.Attributes;
 
 namespace MinimalEndpoints.Example.Endpoints;
 

@@ -1,9 +1,8 @@
 
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Abstractions;
 
-namespace MinimalEndpoints;
+namespace TerraScale.MinimalEndpoints;
 
 /// <summary>
 /// Base class for minimal endpoints with default implementation for GroupName and Tags

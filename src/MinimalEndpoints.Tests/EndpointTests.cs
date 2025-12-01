@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using TerraScale.MinimalEndpoints.Example.Models;
+using MinimalEndpoints.Example.Models;
 
 namespace MinimalEndpoints.Tests;
 

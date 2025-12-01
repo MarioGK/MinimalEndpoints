@@ -35,7 +35,6 @@ public class MinimalEndpointGenerator : IIncrementalGenerator
             return;
 
         var endpointMethods = new List<EndpointMethod>();
-        var diagnostics = new List<Diagnostic>();
 
         foreach (var classSyntax in endpointClasses)
         {
@@ -46,19 +45,9 @@ public class MinimalEndpointGenerator : IIncrementalGenerator
                 continue;
 
             // Validate that class implements IMinimalEndpoint interface
+            // Diagnostics handled by EndpointDiagnosticAnalyzer
             if (!classSymbol.AllInterfaces.Any(i => i.ToDisplayString().Contains("IMinimalEndpoint")))
             {
-                var diagnostic = Diagnostic.Create(
-                    new DiagnosticDescriptor(
-                        "TSME002",
-                        "Endpoint class must implement IMinimalEndpoint",
-                        "Endpoint class '{0}' must implement the IMinimalEndpoint interface.",
-                        "TerraScale.MinimalEndpoints",
-                        DiagnosticSeverity.Error,
-                        isEnabledByDefault: true),
-                    classSyntax.Identifier.GetLocation(),
-                    classSymbol.Name);
-                diagnostics.Add(diagnostic);
                 continue;
             }
 
@@ -74,20 +63,9 @@ public class MinimalEndpointGenerator : IIncrementalGenerator
                 continue; // No HTTP methods, skip this class
             }
 
+            // Diagnostics handled by EndpointDiagnosticAnalyzer
             if (httpMethodCount > 1)
             {
-                var diagnostic = Diagnostic.Create(
-                    new DiagnosticDescriptor(
-                        "TSME003",
-                        "Only one endpoint per file allowed",
-                        "Endpoint class '{0}' contains {1} HTTP method endpoints. Only one endpoint per file is allowed.",
-                        "TerraScale.MinimalEndpoints",
-                        DiagnosticSeverity.Error,
-                        isEnabledByDefault: true),
-                    classSyntax.Identifier.GetLocation(),
-                    classSymbol.Name,
-                    httpMethodCount);
-                diagnostics.Add(diagnostic);
                 continue;
             }
 
@@ -101,19 +79,14 @@ public class MinimalEndpointGenerator : IIncrementalGenerator
                     methodSymbol.DeclaredAccessibility == Accessibility.Public &&
                     !methodSymbol.IsStatic)
                 {
-                    var endpointMethod = EndpointAnalyzer.AnalyzeEndpointMethod(methodSymbol, classSyntax, semanticModel, baseRoute, diagnostics);
+                    var dummyDiagnostics = new List<Diagnostic>();
+                    var endpointMethod = EndpointAnalyzer.AnalyzeEndpointMethod(methodSymbol, classSyntax, semanticModel, baseRoute, dummyDiagnostics);
                     if (endpointMethod != null)
                     {
                         endpointMethods.Add(endpointMethod);
                     }
                 }
             }
-        }
-
-        // Report any diagnostics
-        foreach (var diagnostic in diagnostics)
-        {
-            context.ReportDiagnostic(diagnostic);
         }
 
         // Generate the endpoint registration code

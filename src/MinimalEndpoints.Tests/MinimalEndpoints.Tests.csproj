@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
         <OutputType>Exe</OutputType>
         <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     </PropertyGroup>
@@ -12,5 +13,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\MinimalEndpoints\MinimalEndpoints.csproj" />
+      <ProjectReference Include="..\MinimalEndpoints.Example\MinimalEndpoints.Example.csproj" />
     </ItemGroup>
 </Project>

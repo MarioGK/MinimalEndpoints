@@ -25,6 +25,7 @@ internal class EndpointMethod
     public Dictionary<int, string> ResponseDescriptions { get; set; } = new();
     public List<string> ParameterDescriptions { get; set; } = new();
     public bool HasConfigureMethod { get; set; }
+    public List<string> EndpointFilters { get; set; } = new();
 }
 
 internal class ProducesInfo
