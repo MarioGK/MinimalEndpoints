@@ -1,15 +1,14 @@
 using System.Collections.Immutable;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace MinimalEndpoints.Analyzers;
+namespace MinimalEndpoints.Analyzers.Analyzers;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class EndpointDiagnosticAnalyzer : DiagnosticAnalyzer
 {
     private static readonly DiagnosticDescriptor AsyncRequired = new(
-        "TSME001",
+        "ME001",
         "Endpoint method must be async",
         "Endpoint method '{0}' must return a Task (async). All endpoint methods must be asynchronous.",
         "TerraScale.MinimalEndpoints",
@@ -17,7 +16,7 @@ public class EndpointDiagnosticAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InterfaceRequired = new(
-        "TSME002",
+        "ME002",
         "Endpoint class must implement IMinimalEndpoint",
         "Endpoint class '{0}' must implement the IMinimalEndpoint interface",
         "TerraScale.MinimalEndpoints",
@@ -25,7 +24,7 @@ public class EndpointDiagnosticAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor SingleEndpoint = new(
-        "TSME003",
+        "ME003",
         "Only one endpoint per file allowed",
         "Endpoint class '{0}' contains {1} HTTP method endpoints. Only one endpoint per file is allowed.",
         "TerraScale.MinimalEndpoints",
@@ -65,7 +64,7 @@ public class EndpointDiagnosticAnalyzer : DiagnosticAnalyzer
         if (!hasMinimalEndpointsAttribute && !hasHttpMethodAttributes)
             return;
 
-        // TSME002: Must implement IMinimalEndpoint
+        // ME002: Must implement IMinimalEndpoint
         // Using string check for interface name
         if (!namedType.AllInterfaces.Any(i => i.ToDisplayString().Contains("IMinimalEndpoint")))
         {
@@ -75,7 +74,7 @@ public class EndpointDiagnosticAnalyzer : DiagnosticAnalyzer
                 namedType.Name));
         }
 
-        // TSME003: Single endpoint per file
+        // ME003: Single endpoint per file
         if (httpMethods.Count > 1)
         {
             context.ReportDiagnostic(Diagnostic.Create(
@@ -85,7 +84,7 @@ public class EndpointDiagnosticAnalyzer : DiagnosticAnalyzer
                 httpMethods.Count));
         }
 
-        // TSME001: Async required
+        // ME001: Async required
         foreach (var method in httpMethods)
         {
             if (!method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Contains("Task"))

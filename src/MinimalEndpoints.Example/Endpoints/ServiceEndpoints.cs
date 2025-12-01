@@ -1,7 +1,6 @@
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
-using TerraScale.MinimalEndpoints;
-using TerraScale.MinimalEndpoints.Attributes;
+using MinimalEndpoints.Attributes;
 using MinimalEndpoints.Example.Services;
 
 namespace MinimalEndpoints.Example.Endpoints;

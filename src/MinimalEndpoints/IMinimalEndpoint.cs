@@ -1,4 +1,4 @@
-namespace TerraScale.MinimalEndpoints;
+namespace MinimalEndpoints;
 
 /// <summary>
 /// Interface that all minimal endpoint classes must implement

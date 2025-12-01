@@ -1,4 +1,4 @@
-namespace MinimalEndpoints.Models;
+namespace MinimalEndpoints.Analyzers.Models;
 
 internal class EndpointParameter
 {

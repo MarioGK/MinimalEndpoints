@@ -1,8 +1,7 @@
-using System.Text;
-using MinimalEndpoints.Models;
-using MinimalEndpoints.Helpers;
+using MinimalEndpoints.Analyzers.Helpers;
+using MinimalEndpoints.Analyzers.Models;
 
-namespace MinimalEndpoints.Generators;
+namespace MinimalEndpoints.Analyzers.Generators;
 
 internal static class EndpointRegistrationGenerator
 {

@@ -142,9 +142,9 @@ dotnet build
 The source generator runs during build and creates `MinimalEndpoints.g.cs` with all endpoint registrations.
 
 ## Diagnostic Error Codes
-- **TSME001**: Endpoint method must return `Task` (async requirement)
-- **TSME002**: Endpoint class must implement `IMinimalEndpoint`
-- **TSME003**: Only one HTTP method allowed per endpoint class
+- **ME001**: Endpoint method must return `Task` (async requirement)
+- **ME002**: Endpoint class must implement `IMinimalEndpoint`
+- **ME003**: Only one HTTP method allowed per endpoint class
 
 ## Design Patterns Used
 1. **Source Generation**: Roslyn-based code generation for automatic endpoint discovery

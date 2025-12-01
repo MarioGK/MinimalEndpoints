@@ -3,11 +3,11 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using MinimalEndpoints.Analyzers;
-using MinimalEndpoints.Generators;
-using MinimalEndpoints.Models;
+using MinimalEndpoints.Analyzers.Analyzers;
+using MinimalEndpoints.Analyzers.Generators;
+using MinimalEndpoints.Analyzers.Models;
 
-namespace MinimalEndpoints;
+namespace MinimalEndpoints.Analyzers;
 
 [Generator]
 public class MinimalEndpointGenerator : IIncrementalGenerator

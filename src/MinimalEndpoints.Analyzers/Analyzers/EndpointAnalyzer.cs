@@ -1,10 +1,10 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using MinimalEndpoints.Helpers;
-using MinimalEndpoints.Models;
+using MinimalEndpoints.Analyzers.Helpers;
+using MinimalEndpoints.Analyzers.Models;
 
-namespace MinimalEndpoints.Analyzers;
+namespace MinimalEndpoints.Analyzers.Analyzers;
 
 internal static class EndpointAnalyzer
 {

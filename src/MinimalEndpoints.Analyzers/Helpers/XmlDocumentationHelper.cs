@@ -1,7 +1,7 @@
 using System.Xml;
 using Microsoft.CodeAnalysis;
 
-namespace MinimalEndpoints.Helpers;
+namespace MinimalEndpoints.Analyzers.Helpers;
 
 internal static class XmlDocumentationHelper
 {
