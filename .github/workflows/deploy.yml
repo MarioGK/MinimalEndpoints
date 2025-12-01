@@ -37,7 +37,8 @@ jobs:
 
       - name: Run tests with TUnit (produce TRX)
         run: |
-          dotnet test --configuration Release --no-build --logger "trx;LogFileName=TestResults.trx" --results-directory ./TestResults
+          # Use the MTP test runner mode (global.json config) and pass TUnit-specific flags
+          dotnet test --configuration Release --no-build --results-directory ./TestResults --report-trx --report-trx-filename TestResults.trx
         working-directory: ./src
 
       - name: Upload test results
