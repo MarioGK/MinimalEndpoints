@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 // removed attribute usage; routing and metadata are now declared via IMinimalEndpoint/BaseMinimalApiEndpoint
 
+using TerraScale.MinimalEndpoints.Example.Groups;
+
 namespace TerraScale.MinimalEndpoints.Example.Endpoints;
 
-public class WeatherEndpoints : BaseMinimalApiEndpoint
+public class WeatherEndpoints : BaseMinimalApiEndpoint<WeatherGroup>
 {
     public override string Route => "api/weather";
-    public override string HttpMethod => "GET";
-    public override string? GroupName => "Weather API";
+    public override EndpointHttpMethod HttpMethod => EndpointHttpMethod.Get;
     /// <summary>
     /// Gets weather information for a city
     /// </summary>

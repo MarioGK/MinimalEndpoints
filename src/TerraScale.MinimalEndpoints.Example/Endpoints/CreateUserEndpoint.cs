@@ -3,14 +3,14 @@ using Microsoft.AspNetCore.Mvc;
 // removed attribute usage; routing and metadata are now declared via IMinimalEndpoint/BaseMinimalApiEndpoint
 using TerraScale.MinimalEndpoints.Example.Models;
 using TerraScale.MinimalEndpoints.Example.Services;
+using TerraScale.MinimalEndpoints.Example.Groups;
 
 namespace TerraScale.MinimalEndpoints.Example.Endpoints;
 
-public class CreateUserEndpoint : BaseMinimalApiEndpoint
+public class CreateUserEndpoint : BaseMinimalApiEndpoint<UserManagementGroup>
 {
     public override string Route => "api/users";
-    public override string HttpMethod => "POST";
-    public override string? GroupName => "User Management";
+    public override EndpointHttpMethod HttpMethod => EndpointHttpMethod.Post;
     /// <summary>
     /// Creates a new user
     /// </summary>

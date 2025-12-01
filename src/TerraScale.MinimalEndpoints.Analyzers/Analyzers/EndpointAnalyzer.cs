@@ -80,7 +80,7 @@ internal static class EndpointAnalyzer
         // 1) Method-level Http* attribute (backwards compatibility)
         // 2) Class-level HttpMethod / Route properties (new convention)
 
-        var httpMethod = string.Empty;
+        string? httpMethod = null;
         var route = string.Empty;
 
         // First attempt to read method-level attribute (backward compatibility)
@@ -91,31 +91,31 @@ internal static class EndpointAnalyzer
             {
                 if (attributeName.Contains("HttpGet"))
                 {
-                    httpMethod = "GET";
+                    httpMethod = "Get";
                     route = GetRouteFromAttribute(attribute);
                     break;
                 }
                 else if (attributeName.Contains("HttpPost"))
                 {
-                    httpMethod = "POST";
+                    httpMethod = "Post";
                     route = GetRouteFromAttribute(attribute);
                     break;
                 }
                 else if (attributeName.Contains("HttpPut"))
                 {
-                    httpMethod = "PUT";
+                    httpMethod = "Put";
                     route = GetRouteFromAttribute(attribute);
                     break;
                 }
                 else if (attributeName.Contains("HttpDelete"))
                 {
-                    httpMethod = "DELETE";
+                    httpMethod = "Delete";
                     route = GetRouteFromAttribute(attribute);
                     break;
                 }
                 else if (attributeName.Contains("HttpPatch"))
                 {
-                    httpMethod = "PATCH";
+                    httpMethod = "Patch";
                     route = GetRouteFromAttribute(attribute);
                     break;
                 }
@@ -125,7 +125,7 @@ internal static class EndpointAnalyzer
         // If no method-level HTTP attribute was found, try to read class-level HttpMethod property
         if (string.IsNullOrEmpty(httpMethod))
         {
-            httpMethod = GetHttpMethodFromClass(methodSymbol.ContainingType) ?? string.Empty;
+            httpMethod = GetHttpMethodFromClass(methodSymbol.ContainingType);
         }
 
         // If still no HTTP method is provided, this is not an endpoint we can register
@@ -222,13 +222,44 @@ internal static class EndpointAnalyzer
         var isDeprecated = methodSymbol.GetAttributes()
             .Any(a => a.AttributeClass?.Name.Contains("Obsolete") == true);
 
-        // Get group name from IMinimalEndpoint implementation
-        // Prefer a GroupName property on the class (IMinimalEndpoint), then fall back to the attribute
-        var groupName = ExtractStringFromProperty(methodSymbol.ContainingType, new[] { "GroupName" })
-                        ?? methodSymbol.ContainingType.GetAttributes()
-                            .FirstOrDefault(a => a.AttributeClass?.Name == "EndpointGroupNameAttribute")?
-                            .ConstructorArguments.FirstOrDefault().Value?.ToString()
-                        ?? methodSymbol.ContainingType.Name;
+        // Resolve group from several places (prefer generic base type TGroup, then
+        // a GroupType property (typeof(SomeGroup)), then EndpointGroupNameAttribute,
+        // finally class name).
+        string? groupName = null;
+
+        // 1) If endpoint inherits from BaseMinimalApiEndpoint<TGroup>, get TGroup name
+        var baseType = methodSymbol.ContainingType.BaseType;
+        if (baseType != null && baseType.IsGenericType)
+        {
+            var genericDef = baseType.OriginalDefinition?.Name ?? string.Empty;
+            if (genericDef.Contains("BaseMinimalApiEndpoint"))
+            {
+                var typeArg = baseType.TypeArguments.FirstOrDefault();
+                if (typeArg != null)
+                {
+                    groupName = GetGroupNameFromGroupType(typeArg as INamedTypeSymbol);
+                }
+            }
+        }
+
+        // 2) If no generic base group, try class-level GroupType property (typeof(SomeGroup))
+        if (string.IsNullOrEmpty(groupName))
+        {
+            var typeName = ExtractTypeNameFromProperty(methodSymbol.ContainingType, new[] { "GroupType" });
+            if (!string.IsNullOrEmpty(typeName))
+                groupName = typeName;
+        }
+
+        // 3) Fallback to attribute
+        if (string.IsNullOrEmpty(groupName))
+        {
+            groupName = methodSymbol.ContainingType.GetAttributes()
+                .FirstOrDefault(a => a.AttributeClass?.Name == "EndpointGroupNameAttribute")?
+                .ConstructorArguments.FirstOrDefault().Value?.ToString();
+        }
+
+        // 4) Final fallback to class name
+        groupName ??= methodSymbol.ContainingType.Name;
 
         // Extract produces/consumes from attributes
         var produces = ExtractProducesFromAttribute(methodSymbol, "ProducesAttribute");
@@ -239,45 +270,12 @@ internal static class EndpointAnalyzer
 
         // Extract response descriptions from attributes and merge
         var responseAttributes = methodSymbol.GetAttributes()
-            // Resolve group from several places (prefer generic base type TGroup, then
-            // GroupType property, then EndpointGroupNameAttribute, finally class name).
-            string? groupName = null;
+            .Where(a => a.AttributeClass?.Name == "ResponseDescriptionAttribute");
 
-            // 1) If endpoint inherits from BaseMinimalApiEndpoint<TGroup>, get TGroup name
-            var baseType = methodSymbol.ContainingType.BaseType;
-            if (baseType != null && baseType.IsGenericType)
+        foreach (var attr in responseAttributes)
+        {
+            if (attr.ConstructorArguments.Length == 2)
             {
-                var genericDef = baseType.OriginalDefinition?.Name ?? string.Empty;
-                if (genericDef.Contains("BaseMinimalApiEndpoint"))
-                {
-                    var typeArg = baseType.TypeArguments.FirstOrDefault();
-                    if (typeArg != null)
-                    {
-                        groupName = GetGroupNameFromGroupType(typeArg as INamedTypeSymbol);
-                    }
-                }
-            }
-
-            // 2) If no generic base group, try class-level GroupType property (typeof(SomeGroup))
-            if (string.IsNullOrEmpty(groupName))
-            {
-                var typeName = ExtractTypeNameFromProperty(methodSymbol.ContainingType, new[] { "GroupType" });
-                if (!string.IsNullOrEmpty(typeName))
-                {
-                    groupName = typeName;
-                }
-            }
-
-            // 3) Fallback to attribute
-            if (string.IsNullOrEmpty(groupName))
-            {
-                groupName = methodSymbol.ContainingType.GetAttributes()
-                    .FirstOrDefault(a => a.AttributeClass?.Name == "EndpointGroupNameAttribute")?
-                    .ConstructorArguments.FirstOrDefault().Value?.ToString();
-            }
-
-            // 4) Final fallback to class name
-            groupName ??= methodSymbol.ContainingType.Name;
                 if (attr.ConstructorArguments[0].Value is int statusCode)
                 {
                     var desc = attr.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
@@ -314,7 +312,7 @@ internal static class EndpointAnalyzer
             ClassNamespace = methodSymbol.ContainingType.ContainingNamespace?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? string.Empty,
             ClassName = methodSymbol.ContainingType.Name,
             MethodName = methodSymbol.Name,
-            HttpMethod = httpMethod,
+            HttpMethod = httpMethod ?? string.Empty,
             Route = fullRoute,
             Parameters = parameters,
             ReturnType = methodSymbol.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
@@ -375,9 +373,85 @@ internal static class EndpointAnalyzer
 
     private static string? GetHttpMethodFromClass(INamedTypeSymbol classSymbol)
     {
-        var methodFromProp = ExtractStringFromProperty(classSymbol, new[] { "HttpMethod", "Method" });
-        if (!string.IsNullOrEmpty(methodFromProp))
-            return methodFromProp?.ToUpperInvariant();
+        // Try to extract an enum member (EndpointHttpMethod.Get) or a string literal ("GET").
+        foreach (var decl in classSymbol.DeclaringSyntaxReferences)
+        {
+            var node = decl.GetSyntax();
+            if (node is ClassDeclarationSyntax cls)
+            {
+                foreach (var prop in cls.Members.OfType<PropertyDeclarationSyntax>())
+                {
+                    if (prop.Identifier.Text != "HttpMethod" && prop.Identifier.Text != "Method")
+                        continue;
+
+                    // Expression-bodied property: => EndpointHttpMethod.Get OR => "GET"
+                    if (prop.ExpressionBody?.Expression is MemberAccessExpressionSyntax member)
+                    {
+                        var name = member.Name.Identifier.Text;
+                        var mapped = MapToHttpMethodName(name);
+                        if (!string.IsNullOrEmpty(mapped))
+                            return mapped;
+                    }
+
+                    if (prop.ExpressionBody?.Expression is IdentifierNameSyntax ident)
+                    {
+                        var mapped = MapToHttpMethodName(ident.Identifier.Text);
+                        if (!string.IsNullOrEmpty(mapped))
+                            return mapped;
+                    }
+
+                    if (prop.ExpressionBody?.Expression is LiteralExpressionSyntax lit && lit.IsKind(SyntaxKind.StringLiteralExpression))
+                    {
+                        var val = lit.Token.ValueText.Trim();
+                        var mapped = MapToHttpMethodName(val);
+                        if (!string.IsNullOrEmpty(mapped))
+                            return mapped;
+                    }
+
+                    // Auto-property initializer: HttpMethod = EndpointHttpMethod.Get
+                    if (prop.Initializer?.Value is MemberAccessExpressionSyntax initMember)
+                    {
+                        var nm = initMember.Name.Identifier.Text;
+                        var mapped = MapToHttpMethodName(nm);
+                        if (!string.IsNullOrEmpty(mapped))
+                            return mapped;
+                    }
+
+                    if (prop.Initializer?.Value is LiteralExpressionSyntax initLit && initLit.IsKind(SyntaxKind.StringLiteralExpression))
+                    {
+                        var val = initLit.Token.ValueText.Trim();
+                        var mapped = MapToHttpMethodName(val);
+                        if (!string.IsNullOrEmpty(mapped))
+                            return mapped;
+                    }
+
+                    // Getter with return statement: return EndpointHttpMethod.Get
+                    if (prop.AccessorList != null)
+                    {
+                        var getter = prop.AccessorList.Accessors.FirstOrDefault(a => a.Keyword.IsKind(SyntaxKind.GetKeyword));
+                        if (getter != null)
+                        {
+                            var returnStmt = getter.Body?.Statements.OfType<ReturnStatementSyntax>().FirstOrDefault();
+                            if (returnStmt?.Expression is MemberAccessExpressionSyntax returnMember)
+                            {
+                                var nm2 = returnMember.Name.Identifier.Text;
+                                var mapped = MapToHttpMethodName(nm2);
+                                if (!string.IsNullOrEmpty(mapped))
+                                    return mapped;
+                            }
+
+                            if (returnStmt?.Expression is LiteralExpressionSyntax returnLit && returnLit.IsKind(SyntaxKind.StringLiteralExpression))
+                            {
+                                var val2 = returnLit.Token.ValueText.Trim();
+                                var mapped = MapToHttpMethodName(val2);
+                                if (!string.IsNullOrEmpty(mapped))
+                                    return mapped;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         return null;
     }
@@ -426,6 +500,130 @@ internal static class EndpointAnalyzer
         }
 
         return null;
+    }
+
+    private static string? ExtractTypeNameFromProperty(INamedTypeSymbol classSymbol, string[] propertyNames)
+    {
+        foreach (var decl in classSymbol.DeclaringSyntaxReferences)
+        {
+            var node = decl.GetSyntax();
+            if (node is ClassDeclarationSyntax cls)
+            {
+                foreach (var prop in cls.Members.OfType<PropertyDeclarationSyntax>())
+                {
+                    if (!propertyNames.Contains(prop.Identifier.Text))
+                        continue;
+
+                    // Expression-bodied property: => typeof(SomeGroup)
+                    if (prop.ExpressionBody?.Expression is TypeOfExpressionSyntax typeOfExpr)
+                    {
+                        if (typeOfExpr.Type is IdentifierNameSyntax id)
+                            return id.Identifier.Text;
+                    }
+
+                    // Auto-property initializer: { get; } = typeof(SomeGroup);
+                    if (prop.Initializer?.Value is TypeOfExpressionSyntax initTypeOf)
+                    {
+                        if (initTypeOf.Type is IdentifierNameSyntax id2)
+                            return id2.Identifier.Text;
+                    }
+
+                    // Getter with return statement returning typeof(X)
+                    if (prop.AccessorList != null)
+                    {
+                        var getter = prop.AccessorList.Accessors.FirstOrDefault(a => a.Keyword.IsKind(SyntaxKind.GetKeyword));
+                        if (getter != null)
+                        {
+                            var returnStmt = getter.Body?.Statements.OfType<ReturnStatementSyntax>().FirstOrDefault();
+                            if (returnStmt?.Expression is TypeOfExpressionSyntax retTypeOf)
+                            {
+                                if (retTypeOf.Type is IdentifierNameSyntax id3)
+                                    return id3.Identifier.Text;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? GetGroupNameFromGroupType(INamedTypeSymbol? groupType)
+    {
+        if (groupType == null)
+            return null;
+
+        // Try to find a 'Name' property on the group type which returns a string literal
+        foreach (var decl in groupType.DeclaringSyntaxReferences)
+        {
+            var node = decl.GetSyntax();
+            if (node is ClassDeclarationSyntax cls)
+            {
+                foreach (var prop in cls.Members.OfType<PropertyDeclarationSyntax>())
+                {
+                    if (prop.Identifier.Text != "Name")
+                        continue;
+
+                    if (prop.ExpressionBody?.Expression is LiteralExpressionSyntax lit && lit.IsKind(SyntaxKind.StringLiteralExpression))
+                        return lit.Token.ValueText;
+
+                    if (prop.Initializer?.Value is LiteralExpressionSyntax initLit && initLit.IsKind(SyntaxKind.StringLiteralExpression))
+                        return initLit.Token.ValueText;
+
+                    if (prop.AccessorList != null)
+                    {
+                        var getter = prop.AccessorList.Accessors.FirstOrDefault(a => a.Keyword.IsKind(SyntaxKind.GetKeyword));
+                        if (getter != null)
+                        {
+                            var returnStmt = getter.Body?.Statements.OfType<ReturnStatementSyntax>().FirstOrDefault();
+                            if (returnStmt?.Expression is LiteralExpressionSyntax returnLit && returnLit.IsKind(SyntaxKind.StringLiteralExpression))
+                            {
+                                return returnLit.Token.ValueText;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Default to short type name
+        return groupType.Name;
+    }
+
+    private static string? MapToHttpMethodName(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return null;
+
+        switch (token.Trim().ToLowerInvariant())
+        {
+            case "get":
+            case "httpget":
+                return "Get";
+            case "post":
+            case "httppost":
+                return "Post";
+            case "put":
+            case "httpput":
+                return "Put";
+            case "delete":
+            case "httpdelete":
+                return "Delete";
+            case "patch":
+            case "httppatch":
+                return "Patch";
+            case "head":
+                return "Head";
+            case "options":
+                return "Options";
+            case "trace":
+                return "Trace";
+            case "connect":
+                return "Connect";
+            default:
+                return null;
+        }
     }
 
     private static string GetRouteFromAttribute(AttributeData attribute)

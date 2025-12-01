@@ -2,15 +2,15 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 // removed attribute usage; routing and metadata are now declared via IMinimalEndpoint/BaseMinimalApiEndpoint
 using TerraScale.MinimalEndpoints.Example.Services;
+using TerraScale.MinimalEndpoints.Example.Groups;
 
 namespace TerraScale.MinimalEndpoints.Example.Endpoints;
 
     [UsedImplicitly]
-public class ServiceEndpoints : BaseMinimalApiEndpoint
+public class ServiceEndpoints : BaseMinimalApiEndpoint<ServiceApiGroup>
 {
     public override string Route => "api/services/greet";
-    public override string HttpMethod => "GET";
-    public override string? GroupName => "Service API";
+    public override EndpointHttpMethod HttpMethod => EndpointHttpMethod.Get;
     /// <summary>
     /// Greets a user with a personalized message
     /// </summary>

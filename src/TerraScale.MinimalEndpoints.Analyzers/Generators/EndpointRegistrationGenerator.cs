@@ -96,9 +96,7 @@ internal static class EndpointRegistrationGenerator
                 routePattern = method.Route.StartsWith("/") ? method.Route : $"/{method.Route}";
             }
 
-            var firstChar = method.HttpMethod.Length > 0 ? method.HttpMethod.Substring(0, 1).ToUpperInvariant() : "";
-            var rest = method.HttpMethod.Length > 1 ? method.HttpMethod.Substring(1).ToLowerInvariant() : "";
-            var pascalHttpMethod = firstChar + rest;
+            var pascalHttpMethod = method.HttpMethod?.ToString() ?? string.Empty;
 
             // Prepare lambda parameters
             var lambdaParams = new List<string>();

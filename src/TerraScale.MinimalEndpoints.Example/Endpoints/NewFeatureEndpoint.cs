@@ -6,7 +6,7 @@ namespace TerraScale.MinimalEndpoints.Example.Endpoints;
 public class NewFeatureEndpoint : BaseMinimalApiEndpoint
 {
     public override string Route => "/api/new-features";
-    public override string HttpMethod => "GET";
+    public override EndpointHttpMethod HttpMethod => EndpointHttpMethod.Get;
     
     public async Task<IResult> Handle()
     {

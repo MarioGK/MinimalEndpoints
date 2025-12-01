@@ -10,7 +10,7 @@ public abstract class BaseMinimalApiEndpoint : IMinimalEndpoint
 {
     /// <inheritdoc/>
     /// <inheritdoc/>
-    public virtual System.Type? GroupType => null;
+    public virtual Type? GroupType => null;
 
     /// <inheritdoc/>
     public virtual string[]? Tags => null;
@@ -19,14 +19,17 @@ public abstract class BaseMinimalApiEndpoint : IMinimalEndpoint
     /// The route for this endpoint. Defaults to null/empty which will allow
     /// generator to fall back to a convention-based route if needed.
     /// </summary>
-    public virtual string? Route => null;
+    public abstract string Route { get; }
 
     /// <summary>
     /// The HTTP method for this endpoint (e.g. "GET", "POST"). Defaults to null
     /// which will allow existing Http* attributes to be used for backward
     /// compatibility by the analyzer/generator.
     /// </summary>
-    public virtual EndpointHttpMethod? HttpMethod => null;
+    public virtual EndpointHttpMethod HttpMethod => EndpointHttpMethod.Get;
+
+    // Generic variant of BaseMinimalApiEndpoint is declared as a top-level generic
+    // type in a separate file so the non-generic and generic types can coexist.
     
     /// <summary>
     /// Gets or sets the HttpContext for the current request.

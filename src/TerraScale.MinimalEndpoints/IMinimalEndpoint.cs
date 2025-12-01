@@ -11,7 +11,7 @@ public interface IMinimalEndpoint
     /// The generator will resolve the group's name from the type and use it for
     /// OpenAPI grouping. This replaces the older GroupName string property.
     /// </summary>
-    System.Type? GroupType { get; }
+    Type? GroupType { get; }
     
     /// <summary>
     /// Gets the tags for this endpoint (used for OpenAPI categorization)
@@ -23,11 +23,11 @@ public interface IMinimalEndpoint
     /// pattern (e.g. "api/users/{id}"). This replaces the previous
     /// class-level attribute based route configuration.
     /// </summary>
-    string? Route { get; }
+    string Route { get; }
 
     /// <summary>
     /// The HTTP method for this endpoint. Use the EndpointHttpMethod enum to
     /// declare the verb in a type-safe way.
     /// </summary>
-    EndpointHttpMethod? HttpMethod { get; }
+    EndpointHttpMethod HttpMethod { get; }
 }
