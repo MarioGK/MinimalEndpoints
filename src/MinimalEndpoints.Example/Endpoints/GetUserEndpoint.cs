@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
+using MinimalEndpoints;
+using MinimalEndpoints.Attributes;
 using MinimalEndpoints.Example.Models;
 using MinimalEndpoints.Example.Services;
-using TerraScale.MinimalEndpoints.Attributes;
 
 namespace MinimalEndpoints.Example.Endpoints;
 
 [MinimalEndpoints("api/users")]
-[Attributes.EndpointGroupName("User Management")]
+[EndpointGroupName("User Management")]
 public class GetUserEndpoint : BaseMinimalApiEndpoint
 {
     /// <summary>
@@ -17,7 +18,7 @@ public class GetUserEndpoint : BaseMinimalApiEndpoint
     /// <returns>The user if found, or null</returns>
     /// <response code="200">User found or null if not found</response>
     [HttpGet("{id}")]
-    [Attributes.Produces("application/json", StatusCode = 200)]
+    [Produces("application/json")]
     public async Task<User?> GetUser([FromRoute] int id, [FromServices] IUserService userService)
     {
         await Task.Delay(1);

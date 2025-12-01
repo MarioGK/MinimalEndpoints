@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
-using TerraScale.MinimalEndpoints.Attributes;
+using MinimalEndpoints;
+using MinimalEndpoints.Attributes;
 
 namespace MinimalEndpoints.Example.Endpoints;
 
 [MinimalEndpoints("api/weather")]
-[Attributes.EndpointGroupName("Weather API")]
+[EndpointGroupName("Weather API")]
 public class WeatherEndpoints : BaseMinimalApiEndpoint
 {
     /// <summary>
@@ -19,7 +20,7 @@ public class WeatherEndpoints : BaseMinimalApiEndpoint
     /// <response code="200">Weather information retrieved successfully</response>
     /// <response code="400">Invalid city name provided</response>
     [HttpGet]
-    [Attributes.Produces("application/json", "text/plain", StatusCode = 200)]
+    [Produces("application/json", "text/plain")]
     public async Task<string> GetWeather([FromQuery] string city)
     {
         await Task.Delay(1); // Simulate async work

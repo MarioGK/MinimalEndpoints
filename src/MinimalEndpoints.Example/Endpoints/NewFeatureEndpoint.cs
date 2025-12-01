@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using MinimalEndpoints;
+using MinimalEndpoints.Attributes;
 
 namespace MinimalEndpoints.Example.Endpoints;
 
+[MinimalEndpoints("api/new-features")]
 public class NewFeatureEndpoint : BaseMinimalApiEndpoint
 {
     [HttpGet("/api/new-features")]

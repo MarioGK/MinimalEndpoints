@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MinimalEndpoints.Helpers;
+using MinimalEndpoints.Models;
 
 namespace MinimalEndpoints.Analyzers;
 

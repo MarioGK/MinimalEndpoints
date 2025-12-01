@@ -1,13 +1,14 @@
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
+using MinimalEndpoints;
+using MinimalEndpoints.Attributes;
 using MinimalEndpoints.Example.Services;
-using TerraScale.MinimalEndpoints.Attributes;
 
 namespace MinimalEndpoints.Example.Endpoints;
 
 [UsedImplicitly]
 [MinimalEndpoints("api/services")]
-[Attributes.EndpointGroupName("Service API")]
+[EndpointGroupName("Service API")]
 public class ServiceEndpoints : BaseMinimalApiEndpoint
 {
     /// <summary>
@@ -23,7 +24,7 @@ public class ServiceEndpoints : BaseMinimalApiEndpoint
     /// <response code="200">Greeting message generated successfully</response>
     /// <response code="400">Invalid name provided</response>
     [HttpGet("greet")]
-    [Attributes.Produces("text/plain", StatusCode = 200)]
+    [Produces("text/plain")]
     public async Task<string> Greet([FromQuery] string name,
         [FromServices] IGreetingService service)
     {

@@ -1,17 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
+using MinimalEndpoints;
+using MinimalEndpoints.Attributes;
 using MinimalEndpoints.Example.Models;
 using MinimalEndpoints.Example.Services;
-using TerraScale.MinimalEndpoints.Attributes;
 
 namespace MinimalEndpoints.Example.Endpoints;
 
 [MinimalEndpoints("api/users")]
-[Attributes.EndpointGroupName("User Management")]
+[EndpointGroupName("User Management")]
 public class UpdateUserEndpoint : BaseMinimalApiEndpoint
 {
     [HttpPut("{id}")]
-    [Attributes.Produces("application/json", StatusCode = 200)]
-    [Attributes.Consumes("application/json")]
+    [Produces("application/json")]
+    [Consumes("application/json")]
     public async Task<IResult> UpdateUser([FromRoute] int id, [FromBody] UpdateUserRequest request, [FromServices] IUserService userService)
     {
         await Task.Delay(1);

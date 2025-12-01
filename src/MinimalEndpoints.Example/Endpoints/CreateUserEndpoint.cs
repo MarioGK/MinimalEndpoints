@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MinimalEndpoints;
+using MinimalEndpoints.Attributes;
 using MinimalEndpoints.Example.Models;
 using MinimalEndpoints.Example.Services;
 
@@ -24,7 +26,7 @@ public class CreateUserEndpoint : BaseMinimalApiEndpoint
     /// <response code="403">Admin privileges required</response>
     [HttpPost]
     [Authorize(Roles = "Admin")]
-    [Produces("application/json", StatusCode = 201)]
+    [Produces("application/json")]
     [Consumes("application/json")]
     public async Task<User> CreateUser([FromBody] CreateUserRequest request, [FromServices] IUserService userService)
     {
