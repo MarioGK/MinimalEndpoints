@@ -1,4 +1,4 @@
-# MinimalEndpoints
+# TerraScale.MinimalEndpoints
 
 A source generator library that makes it easier to work with Minimal APIs in ASP.NET Core by providing a per-endpoint file pattern with automatic registration.
 

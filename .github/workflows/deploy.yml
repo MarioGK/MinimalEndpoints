@@ -87,7 +87,7 @@ jobs:
         working-directory: ./src
 
       - name: Pack NuGet package
-        run: dotnet pack MinimalEndpoints/MinimalEndpoints.csproj --configuration Release --output ./nupkg --no-build -p:PackageVersion=${{ env.VERSION }}
+        run: dotnet pack MinimalEndpoints/TerraScale.MinimalEndpoints.csproj --configuration Release --output ./nupkg --no-build -p:PackageVersion=${{ env.VERSION }}
         working-directory: ./src
 
       - name: Push to NuGet.org
@@ -105,7 +105,7 @@ jobs:
           body: |
             Release ${{ github.ref_name }} has been published to NuGet.org
 
-            Package: https://www.nuget.org/packages/MinimalEndpoints
+            Package: https://www.nuget.org/packages/TerraScale.MinimalEndpoints
           draft: false
           prerelease: false
 
@@ -162,6 +162,6 @@ jobs:
           body: |
             Release v${{ steps.tag_and_release.outputs.version }} has been published to NuGet.org
 
-            Package: https://www.nuget.org/packages/MinimalEndpoints
+            Package: https://www.nuget.org/packages/TerraScale.MinimalEndpoints
           draft: false
           prerelease: false

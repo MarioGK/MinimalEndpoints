@@ -1,7 +1,7 @@
-# MinimalEndpoints - Project Analysis for Agents
+# TerraScale.MinimalEndpoints - Project Analysis for Agents
 
 ## Overview
-**MinimalEndpoints** is a C# source code generator that simplifies ASP.NET Core minimal API development by providing a FastEndpoints alternative built on top of minimal APIs.
+**TerraScale.MinimalEndpoints** is a C# source code generator that simplifies ASP.NET Core minimal API development by providing a FastEndpoints alternative built on top of minimal APIs.
 It combines the power of ASP.NET Core's minimal APIs with an attribute-driven, class-based endpoint structure.
 
 ## Project Purpose

@@ -1,4 +1,4 @@
-# GitVersion configuration for MinimalEndpoints
+# GitVersion configuration for TerraScale.MinimalEndpoints
 # Mainline mode: version evolves along main and tags are used to set release versions.
 mode: ContinuousDeployment
 next-version: 1.0.0
