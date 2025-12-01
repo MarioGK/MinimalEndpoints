@@ -8,6 +8,8 @@ permissions:
 
 on:
   push:
+    branches:
+      - 'main'
     tags:
       - 'v*'
   workflow_dispatch:
@@ -60,8 +62,32 @@ jobs:
         with:
           files: ./src/TestResults/**/*.trx
 
+      - name: Ensure jq is available (used to parse gitversion output)
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Determine package version
+        # When invoked with workflow_dispatch and a version input, we prefer that.
+        # When running on a tag we use the tag name. Otherwise, we read the GitVersion output
+        # produced during the build (obj/gitversion.json) and use NuGetVersionV2 so the package
+        # gets a CI-incremented version on main.
+        run: |
+          echo "GITHUB_REF=$GITHUB_REF"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          else
+            # GitVersion MSBuild target creates obj/gitversion.json in the project folder
+            echo "Reading gitversion file: MinimalEndpoints/obj/gitversion.json"
+            cat MinimalEndpoints/obj/gitversion.json
+            VERSION=$(jq -r '.NuGetVersionV2' MinimalEndpoints/obj/gitversion.json)
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+          fi
+        working-directory: ./src
+
       - name: Pack NuGet package
-        run: dotnet pack MinimalEndpoints/MinimalEndpoints.csproj --configuration Release --output ./nupkg --no-build
+        run: dotnet pack MinimalEndpoints/MinimalEndpoints.csproj --configuration Release --output ./nupkg --no-build -p:PackageVersion=${{ env.VERSION }}
         working-directory: ./src
 
       - name: Push to NuGet.org
