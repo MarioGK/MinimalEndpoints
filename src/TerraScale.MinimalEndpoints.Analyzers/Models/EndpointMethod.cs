@@ -20,6 +20,7 @@ internal class EndpointMethod
     public List<string> Tags { get; set; } = new();
     public bool IsDeprecated { get; set; }
     public string? GroupName { get; set; }
+    public string? GroupTypeFullName { get; set; }
     public List<ProducesInfo> Produces { get; set; } = new();
     public List<string> Consumes { get; set; } = new();
     public Dictionary<int, string> ResponseDescriptions { get; set; } = new();
