@@ -1,11 +1,13 @@
 using TerraScale.MinimalEndpoints.Analyzers.Helpers;
 using TerraScale.MinimalEndpoints.Analyzers.Models;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace TerraScale.MinimalEndpoints.Analyzers.Generators;
 
 internal static class EndpointRegistrationGenerator
 {
-    public static string GenerateEndpointRegistrationCode(List<EndpointMethod> endpointMethods, string assemblyName)
+    public static string GenerateEndpointRegistrationCode(List<EndpointMethod> endpointMethods, List<GroupModel> groups, string assemblyName)
     {
         var sb = new IndentedStringBuilder();
 
@@ -17,9 +19,6 @@ internal static class EndpointRegistrationGenerator
         sb.AppendLine("using Microsoft.AspNetCore.Http;");
 
         sb.AppendLine();
-        // Use a unique namespace per assembly to avoid ambiguous extension method
-        // conflicts when multiple assemblies generate registration helpers. Sanitize
-        // assemblyName into a simple identifier.
         var sanitized = new string(assemblyName.Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
         sb.AppendLine($"namespace TerraScale.MinimalEndpoints.Generated_{sanitized};");
         sb.AppendLine();
@@ -28,9 +27,6 @@ internal static class EndpointRegistrationGenerator
 
         using (sb.Indent())
         {
-            // AddMinimalEndpoints (generated) - use unique names to avoid conflicts when multiple
-            // assemblies produce generated registration code. Consumers should call the generated
-            // versions below (AddGeneratedMinimalEndpoints / MapGeneratedMinimalEndpoints).
             sb.AppendLine("public static IServiceCollection AddGeneratedMinimalEndpoints(this IServiceCollection services)");
             sb.AppendLine("{");
             using (sb.Indent())
@@ -54,7 +50,6 @@ internal static class EndpointRegistrationGenerator
             sb.AppendLine("}");
             sb.AppendLine();
 
-            // MapMinimalEndpoints (generated)
             sb.AppendLine("public static void MapGeneratedMinimalEndpoints(this IEndpointRouteBuilder endpoints)");
             sb.AppendLine("{");
             using (sb.Indent())
@@ -65,9 +60,83 @@ internal static class EndpointRegistrationGenerator
                 }
                 else
                 {
-                    foreach (var method in endpointMethods)
+                    // Group endpoints by GroupTypeFullName
+                    // Use a stable sort order
+                    var groupedEndpoints = endpointMethods
+                        .GroupBy(m => m.GroupTypeFullName)
+                        .OrderBy(g => g.Key ?? string.Empty);
+
+                    int groupCounter = 0;
+
+                    foreach (var group in groupedEndpoints)
                     {
-                        GenerateMethodRegistration(sb, method);
+                        string builderName = "endpoints";
+
+                        // Check if this is a named group
+                        if (!string.IsNullOrEmpty(group.Key))
+                        {
+                            var groupModel = groups.FirstOrDefault(g => g.TypeFullName == group.Key);
+                            if (groupModel != null)
+                            {
+                                builderName = $"group_{groupCounter++}";
+                                sb.AppendLine();
+                                sb.AppendLine($"// Group: {groupModel.ClassName}");
+                                sb.AppendLine($"var {builderName} = endpoints.MapGroup(new {groupModel.TypeFullName}().RoutePrefix);");
+                                sb.AppendLine($"new {groupModel.TypeFullName}().Configure({builderName});");
+
+                                // Apply attributes
+                                if (groupModel.HasAuthorize)
+                                {
+                                     // Let's assume we use object initializer on AuthorizeAttribute
+                                     var authLine = new System.Text.StringBuilder();
+                                     authLine.Append($"{builderName}.RequireAuthorization(new Microsoft.AspNetCore.Authorization.AuthorizeAttribute");
+                                     var props = new List<string>();
+                                     if (!string.IsNullOrEmpty(groupModel.Policy)) props.Add($"Policy = \"{EscapeString(groupModel.Policy)}\"");
+                                     if (!string.IsNullOrEmpty(groupModel.Roles)) props.Add($"Roles = \"{EscapeString(groupModel.Roles)}\"");
+                                     if (!string.IsNullOrEmpty(groupModel.AuthenticationSchemes)) props.Add($"AuthenticationSchemes = \"{EscapeString(groupModel.AuthenticationSchemes)}\"");
+
+                                     if (props.Any())
+                                     {
+                                         authLine.Append($" {{ {string.Join(", ", props)} }}");
+                                     }
+                                     authLine.Append(");");
+                                     sb.AppendLine(authLine.ToString());
+                                }
+
+                                if (groupModel.HasAllowAnonymous)
+                                {
+                                    sb.AppendLine($"{builderName}.AllowAnonymous();");
+                                }
+
+                                // Group Name
+                                if (!string.IsNullOrEmpty(groupModel.EndpointGroupNameAttributeValue))
+                                {
+                                    sb.AppendLine($"{builderName}.WithGroupName(\"{EscapeString(groupModel.EndpointGroupNameAttributeValue)}\");");
+                                }
+                                else
+                                {
+                                    sb.AppendLine($"{builderName}.WithGroupName(new {groupModel.TypeFullName}().Name);");
+                                }
+
+                                // Tags
+                                if (groupModel.Tags.Any())
+                                {
+                                    var tagsArgs = string.Join(", ", groupModel.Tags.Select(t => $"\"{EscapeString(t)}\""));
+                                    sb.AppendLine($"{builderName}.WithTags(new[] {{ {tagsArgs} }});");
+                                }
+
+                                // Filters
+                                foreach (var filter in groupModel.EndpointFilters)
+                                {
+                                    sb.AppendLine($"{builderName}.AddEndpointFilter<{filter}>();");
+                                }
+                            }
+                        }
+
+                        foreach (var method in group)
+                        {
+                            GenerateMethodRegistration(sb, method, builderName);
+                        }
                     }
                 }
             }
@@ -78,7 +147,7 @@ internal static class EndpointRegistrationGenerator
         return sb.ToString();
     }
 
-    private static void GenerateMethodRegistration(IndentedStringBuilder sb, EndpointMethod method)
+    private static void GenerateMethodRegistration(IndentedStringBuilder sb, EndpointMethod method, string builderName)
     {
         sb.AppendLine();
         sb.AppendLine($"// Register {method.ClassName}.{method.MethodName}");
@@ -97,15 +166,12 @@ internal static class EndpointRegistrationGenerator
             }
 
             var pascalHttpMethod = method.HttpMethod?.ToString() ?? string.Empty;
-
-            // Prepare lambda parameters
             var lambdaParams = new List<string>();
 
-            // Inject the instance itself!
+            // Inject the instance itself
             var instanceType = string.IsNullOrEmpty(method.ClassNamespace) ? method.ClassName : $"{method.ClassNamespace}.{method.ClassName}";
             lambdaParams.Add($"[Microsoft.AspNetCore.Mvc.FromServices] {instanceType} instance");
 
-            // Check for HttpContext parameter in user method
             var httpContextParam = method.Parameters.FirstOrDefault(p => p.Type.EndsWith("HttpContext"));
             var httpContextVarName = httpContextParam?.Name ?? "httpContext";
 
@@ -121,21 +187,17 @@ internal static class EndpointRegistrationGenerator
                 lambdaParams.Add($"{attrString}{param.Type} {param.Name}");
             }
 
-            // If HttpContext is not in parameters, add it to lambda params so we can use it
             if (httpContextParam == null)
             {
                 lambdaParams.Add($"HttpContext {httpContextVarName}");
             }
 
-            sb.AppendLine($"var builder = endpoints.Map{pascalHttpMethod}(\"{routePattern}\", async (");
+            sb.AppendLine($"var builder = {builderName}.Map{pascalHttpMethod}(\"{routePattern}\", async (");
             sb.AppendLine($"    {string.Join(", ", lambdaParams)}) =>");
 
             sb.AppendLine("{");
             using (sb.Indent())
             {
-                // Set Context on base class if applicable
-                // Check if instance inherits from BaseMinimalApiEndpoint
-                // Use fully qualified name for BaseMinimalApiEndpoint: TerraScale.MinimalEndpoints.BaseMinimalApiEndpoint
                 sb.AppendLine($"if (instance is TerraScale.MinimalEndpoints.BaseMinimalApiEndpoint baseEp)");
                 sb.AppendLine("{");
                 using (sb.Indent())
@@ -155,9 +217,8 @@ internal static class EndpointRegistrationGenerator
                     sb.AppendLine($"return instance.{method.MethodName}({methodCallParams});");
                 }
             }
-            sb.AppendLine("});"); // End of Map call
+            sb.AppendLine("});");
 
-            // Add OpenAPI metadata
             if (!string.IsNullOrEmpty(method.Summary))
             {
                 sb.AppendLine($"builder.WithName(\"{EscapeString(method.MethodName)}\");");
@@ -169,7 +230,6 @@ internal static class EndpointRegistrationGenerator
                 sb.AppendLine($"builder.WithDescription(\"{EscapeString(method.Description)}\");");
             }
 
-            // Add tags
             var allTags = new List<string>();
             if (method.Tags.Any())
             {
@@ -182,13 +242,11 @@ internal static class EndpointRegistrationGenerator
                 sb.AppendLine($"builder.WithTags(new[] {{ {tagsArray} }});");
             }
 
-            // Add group name
             if (!string.IsNullOrEmpty(method.GroupName) && method.GroupName != method.ClassName)
             {
                 sb.AppendLine($"builder.WithGroupName(\"{EscapeString(method.GroupName)}\");");
             }
 
-            // Add produces content types
             foreach (var prod in method.Produces)
             {
                  var first = prod.ContentTypes.FirstOrDefault() ?? "application/json";
@@ -198,7 +256,6 @@ internal static class EndpointRegistrationGenerator
                  sb.AppendLine($"builder.Produces({prod.StatusCode}, typeof({method.ReturnTypeInner}), \"{EscapeString(first)}\"{othersArg});");
             }
 
-            // Add consumes content types via Accepts
             if (method.Consumes.Any())
             {
                 var bodyParam = method.Parameters.FirstOrDefault(p => p.IsFromBody);
@@ -211,7 +268,6 @@ internal static class EndpointRegistrationGenerator
                 sb.AppendLine($"builder.Accepts({typeString}, \"{EscapeString(first)}\"{othersArg});");
             }
 
-            // Add response descriptions
             foreach (var response in method.ResponseDescriptions)
             {
                  var typeToUse = response.Key == 200 ? $"typeof({method.ReturnTypeInner})" : "typeof(void)";
@@ -223,13 +279,33 @@ internal static class EndpointRegistrationGenerator
                 sb.AppendLine($"builder.WithOpenApi(op => {{ op.Deprecated = true; return op; }});");
             }
 
-            // Add endpoint filters
+            if (method.HasAllowAnonymous)
+            {
+                sb.AppendLine("builder.AllowAnonymous();");
+            }
+
+            if (method.HasAuthorize)
+            {
+                 var authLine = new System.Text.StringBuilder();
+                 authLine.Append("builder.RequireAuthorization(new Microsoft.AspNetCore.Authorization.AuthorizeAttribute");
+                 var props = new List<string>();
+                 if (!string.IsNullOrEmpty(method.Policy)) props.Add($"Policy = \"{EscapeString(method.Policy)}\"");
+                 if (!string.IsNullOrEmpty(method.Roles)) props.Add($"Roles = \"{EscapeString(method.Roles)}\"");
+                 if (!string.IsNullOrEmpty(method.AuthenticationSchemes)) props.Add($"AuthenticationSchemes = \"{EscapeString(method.AuthenticationSchemes)}\"");
+
+                 if (props.Any())
+                 {
+                     authLine.Append($" {{ {string.Join(", ", props)} }}");
+                 }
+                 authLine.Append(");");
+                 sb.AppendLine(authLine.ToString());
+            }
+
             foreach (var filter in method.EndpointFilters)
             {
                 sb.AppendLine($"builder.AddEndpointFilter<{filter}>();");
             }
 
-            // Call Configure method if exists
             if (method.HasConfigureMethod)
             {
                  var typeName = string.IsNullOrEmpty(method.ClassNamespace) ? method.ClassName : $"{method.ClassNamespace}.{method.ClassName}";

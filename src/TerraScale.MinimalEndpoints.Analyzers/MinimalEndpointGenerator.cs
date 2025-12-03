@@ -90,11 +90,34 @@ public class MinimalEndpointGenerator : IIncrementalGenerator
             }
         }
 
+        // Analyze groups
+        var groups = new List<GroupModel>();
+        var groupTypeNames = endpointMethods
+            .Where(m => !string.IsNullOrEmpty(m.GroupTypeFullName))
+            .Select(m => m.GroupTypeFullName!)
+            .Distinct()
+            .ToList();
+
+        foreach (var groupTypeName in groupTypeNames)
+        {
+            // Strip "global::" if present
+            var lookupName = groupTypeName.StartsWith("global::")
+                ? groupTypeName.Substring(8)
+                : groupTypeName;
+
+            var groupSymbol = compilation.GetTypeByMetadataName(lookupName);
+            if (groupSymbol != null)
+            {
+                var groupModel = GroupAnalyzer.AnalyzeGroup(groupSymbol);
+                groups.Add(groupModel);
+            }
+        }
+
         // Generate the endpoint registration code. Include assembly name so generated
         // registration namespace is unique per compilation, avoiding duplicate extension
         // method ambiguity when multiple assemblies generate registration helpers.
         var assemblyName = compilation.AssemblyName ?? "Generated";
-        var sourceCode = EndpointRegistrationGenerator.GenerateEndpointRegistrationCode(endpointMethods, assemblyName);
+        var sourceCode = EndpointRegistrationGenerator.GenerateEndpointRegistrationCode(endpointMethods, groups, assemblyName);
         context.AddSource("MinimalEndpoints.g.cs", SourceText.From(sourceCode, Encoding.UTF8));
     }
 }
