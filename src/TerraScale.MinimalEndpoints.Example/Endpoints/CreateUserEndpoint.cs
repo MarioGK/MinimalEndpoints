@@ -27,9 +27,9 @@ public class CreateUserEndpoint : BaseMinimalApiEndpoint<UserManagementGroup>
     [Authorize(Roles = "Admin")]
     [Produces("application/json")]
     [Consumes("application/json")]
-    public async Task<User> CreateUser([FromBody] CreateUserRequest request, [FromServices] IUserService userService)
+    public async Task<IResult> CreateUser([FromBody] CreateUserRequest request, [FromServices] IUserService userService)
     {
         await Task.Delay(10); // Simulate async work
-        return userService.Create(request.Name);
+        return Ok(userService.Create(request.Name));
     }
 }
