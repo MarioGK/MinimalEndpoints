@@ -14,6 +14,12 @@ public class MinimalEndpointGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        // Always generate a test file to verify generator is working
+        context.RegisterSourceOutput(context.CompilationProvider, static (spc, compilation) => {
+            var testSource = "// Generator is working!\n// Assembly: " + compilation.AssemblyName + "\n";
+            spc.AddSource("GeneratorTest.g.cs", SourceText.From(testSource, Encoding.UTF8));
+        });
+
         // Find all classes with MinimalEndpoints attribute or HTTP method attributes
         var endpointClasses = context.SyntaxProvider
             .CreateSyntaxProvider(
@@ -25,12 +31,16 @@ public class MinimalEndpointGenerator : IIncrementalGenerator
         // Combine with compilation
         var compilationAndClasses = context.CompilationProvider.Combine(endpointClasses.Collect());
 
-        // Generate the source code
+        // Generate source code
         context.RegisterSourceOutput(compilationAndClasses, static (spc, source) => Execute(source.Left, source.Right, spc));
     }
 
     private static void Execute(Compilation compilation, ImmutableArray<ClassDeclarationSyntax> endpointClasses, SourceProductionContext context)
     {
+        // Always generate a debug file to see if generator is running
+        var debugSource = $"// Generated at {DateTime.UtcNow:O}\n// Found {endpointClasses.Length} endpoint classes\n";
+        context.AddSource("Debug.g.cs", SourceText.From(debugSource, Encoding.UTF8));
+        
         if (endpointClasses.IsDefaultOrEmpty)
             return;
 
