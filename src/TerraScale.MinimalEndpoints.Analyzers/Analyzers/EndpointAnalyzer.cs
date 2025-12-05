@@ -30,7 +30,11 @@ internal static class EndpointAnalyzer
             .OfType<PropertyDeclarationSyntax>()
             .Any(p => p.Identifier.Text == "HttpMethod" || p.Identifier.Text == "Method");
 
-        return hasMinimalEndpointsAttribute || hasHttpMethodAttributes || hasRouteProperty || hasHttpMethodProperty;
+        var hasBaseType = classDeclaration.BaseList?.Types
+            .Any(t => t.Type.ToString().Contains("BaseMinimalApiEndpoint") || 
+                      t.Type.ToString().Contains("IMinimalEndpoint")) ?? false;
+
+        return hasMinimalEndpointsAttribute || hasHttpMethodAttributes || hasRouteProperty || hasHttpMethodProperty || hasBaseType;
     }
 
     public static ClassDeclarationSyntax? GetEndpointClass(GeneratorSyntaxContext context)
@@ -54,7 +58,11 @@ internal static class EndpointAnalyzer
             .OfType<PropertyDeclarationSyntax>()
             .Any(p => p.Identifier.Text == "HttpMethod" || p.Identifier.Text == "Method");
 
-        if (!hasMinimalEndpointsAttribute && !hasHttpMethodAttributes && !hasRouteProperty && !hasHttpMethodProperty)
+        var hasBaseType = classDeclaration.BaseList?.Types
+            .Any(t => t.Type.ToString().Contains("BaseMinimalApiEndpoint") || 
+                      t.Type.ToString().Contains("IMinimalEndpoint")) ?? false;
+
+        if (!hasMinimalEndpointsAttribute && !hasHttpMethodAttributes && !hasRouteProperty && !hasHttpMethodProperty && !hasBaseType)
             return null;
 
         return classDeclaration;
