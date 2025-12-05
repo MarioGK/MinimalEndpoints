@@ -226,7 +226,6 @@ internal static class EndpointAnalyzer
         // a GroupType property (typeof(SomeGroup)), then EndpointGroupNameAttribute,
         // finally class name).
         string? groupName = null;
-        string? groupTypeFullName = null;
 
         // 1) If endpoint inherits from BaseMinimalApiEndpoint<TGroup>, get TGroup name
         var baseType = methodSymbol.ContainingType.BaseType;
@@ -236,10 +235,9 @@ internal static class EndpointAnalyzer
             if (genericDef.Contains("BaseMinimalApiEndpoint"))
             {
                 var typeArg = baseType.TypeArguments.FirstOrDefault();
-                if (typeArg is INamedTypeSymbol namedTypeArg)
+                if (typeArg != null)
                 {
-                    groupName = GetGroupNameFromGroupType(namedTypeArg);
-                    groupTypeFullName = namedTypeArg.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    groupName = GetGroupNameFromGroupType(typeArg as INamedTypeSymbol);
                 }
             }
         }
@@ -249,16 +247,7 @@ internal static class EndpointAnalyzer
         {
             var typeName = ExtractTypeNameFromProperty(methodSymbol.ContainingType, new[] { "GroupType" });
             if (!string.IsNullOrEmpty(typeName))
-            {
                 groupName = typeName;
-
-                // Try to resolve the symbol for GroupType property if it is in the current syntax tree
-                var groupTypeSymbol = ResolveGroupTypeFromProperty(classSyntax, semanticModel);
-                if (groupTypeSymbol != null)
-                {
-                    groupTypeFullName = groupTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                }
-            }
         }
 
         // 3) Fallback to attribute
@@ -338,7 +327,6 @@ internal static class EndpointAnalyzer
             Tags = tags,
             IsDeprecated = isDeprecated,
             GroupName = groupName,
-            GroupTypeFullName = groupTypeFullName,
             Produces = produces,
             Consumes = consumes,
             ResponseDescriptions = responseDescriptions,
@@ -362,45 +350,6 @@ internal static class EndpointAnalyzer
             }
         }
         return filters;
-    }
-
-    private static INamedTypeSymbol? ResolveGroupTypeFromProperty(ClassDeclarationSyntax classSyntax, SemanticModel semanticModel)
-    {
-        foreach (var prop in classSyntax.Members.OfType<PropertyDeclarationSyntax>())
-        {
-            if (prop.Identifier.Text != "GroupType")
-                continue;
-
-            // => typeof(T)
-            if (prop.ExpressionBody?.Expression is TypeOfExpressionSyntax typeOfExpr)
-            {
-                 var typeInfo = semanticModel.GetTypeInfo(typeOfExpr.Type);
-                 return typeInfo.Type as INamedTypeSymbol;
-            }
-
-            // { get; } = typeof(T)
-            if (prop.Initializer?.Value is TypeOfExpressionSyntax initTypeOf)
-            {
-                 var typeInfo = semanticModel.GetTypeInfo(initTypeOf.Type);
-                 return typeInfo.Type as INamedTypeSymbol;
-            }
-
-            // getter { return typeof(T); }
-            if (prop.AccessorList != null)
-            {
-                var getter = prop.AccessorList.Accessors.FirstOrDefault(a => a.Keyword.IsKind(SyntaxKind.GetKeyword));
-                if (getter != null)
-                {
-                    var returnStmt = getter.Body?.Statements.OfType<ReturnStatementSyntax>().FirstOrDefault();
-                    if (returnStmt?.Expression is TypeOfExpressionSyntax retTypeOf)
-                    {
-                         var typeInfo = semanticModel.GetTypeInfo(retTypeOf.Type);
-                         return typeInfo.Type as INamedTypeSymbol;
-                    }
-                }
-            }
-        }
-        return null;
     }
 
     public static string GetBaseRoute(INamedTypeSymbol classSymbol)

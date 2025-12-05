@@ -11,6 +11,7 @@ namespace TerraScale.MinimalEndpoints.Example.Endpoints;
 [Authorize(Roles = "Admin")]
 public class MyTestGroup : EndpointGroup
 {
+    public override string Name => "My Test Group";
     public override string RoutePrefix => "/grouped";
 
     public override void Configure(RouteGroupBuilder builder)
